@@ -1,0 +1,220 @@
+---
+title: "test"
+format: html
+---
+
+
+
+```{r}
+
+pacman::p_load(tidyverse, lubridate, tsibble, scales)
+
+trade <- read_csv("trade.csv") %>%
+  mutate(
+    Month = (Quarter * 3) - 2,
+    date = ymd(paste(Year, Month, 1)),
+    Quarter = yearquarter(date)
+  )
+
+# Load the data
+df <- read_csv("trade.csv")
+
+# Display the first 10 rows
+#head(df, 10) %>% print()
+
+# --- Chart 1: Trade Balance by Country (Top/Btm 10) --- #
+country_bal <- df %>%
+  group_by(Country) %>%
+  summarise(trade_bal = sum(trade_bal, na.rm = TRUE)) %>%
+  ungroup()
+
+top10 <- country_bal %>% top_n(10, trade_bal)
+bottom10 <- country_bal %>% top_n(-10, trade_bal)
+
+combined <- bind_rows(bottom10, top10) %>%
+  arrange(trade_bal)
+
+# Plot horizontal bar chart
+ggplot(combined, aes(x = reorder(Country, trade_bal), y = trade_bal)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Net Trade Balance by Country (2017)",
+       x = "Country",
+       y = "Trade Balance (USD)")
+
+
+```
+
+
+
+```{r}
+
+trade <- read_csv("trade.csv") %>%
+  mutate(
+    Month = (Quarter * 3) - 2,
+    date = ymd(paste(Year, Month, 1)),
+    Quarter = yearquarter(date)
+  ) %>%
+  group_by(date, Description) %>%
+  mutate(
+    total_by_desc_qtr = sum(trade_bal, na.rm = TRUE),
+    desc_pct = trade_bal / total_by_desc_qtr
+  ) %>%
+  ungroup()
+
+
+```
+
+
+
+fixing data set 
+I'm doing the percentage preparations
+
+```{r}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+spacer
