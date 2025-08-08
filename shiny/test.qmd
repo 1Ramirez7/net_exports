@@ -5,81 +5,141 @@ format: html
 
 
 
-```{r}
 
-pacman::p_load(tidyverse, lubridate, tsibble, scales)
 
-trade <- read_csv("trade.csv") %>%
+```{r, message=FALSE, warning=FALSE}
+# load df and prepare data
+pacman::p_load(tidyverse, lubridate, tsibble, scales, dplyr)
+
+trade_balance <- read_csv("https://raw.githubusercontent.com/1Ramirez7/net_exports/main/shiny/raw_data/1989-1996_trade_balance_all_commodities.csv")
+
+
+trade_balance <- trade_balance |>
   mutate(
-    Month = (Quarter * 3) - 2,
-    date = ymd(paste(Year, Month, 1)),
-    Quarter = yearquarter(date)
+    month = (quarter * 3) - 2,
+    date = mdy(paste0(month, "/01/", year)),
+    trade_bal = as.numeric(trade_bal),
+    country = as.character(country),
+    description = as.character(description)
+  ) |>
+  select(date, country, description, trade_bal)
+
+
+```
+
+give me code so i can make a new variable name 'date_unique' that takes all the unique dates in the 'date variable. 
+
+do the same for description and name it desc_unique
+
+
+
+```{r, message=FALSE, warning=FALSE}
+# group by date and description to get total values
+
+total_balance <- trade_balance |>
+  group_by(date, description) |>
+  summarise(
+    net_exports = sum(trade_bal, na.rm = TRUE),
+    total_exports = sum(trade_bal[trade_bal >= 0], na.rm = TRUE),
+    total_imports = sum(trade_bal[trade_bal < 0], na.rm = TRUE),
+    .groups = "drop"
   )
 
-# Load the data
-df <- read_csv("trade.csv")
 
-# Display the first 10 rows
-#head(df, 10) %>% print()
+```
 
-# --- Chart 1: Trade Balance by Country (Top/Btm 10) --- #
-country_bal <- df %>%
-  group_by(Country) %>%
-  summarise(trade_bal = sum(trade_bal, na.rm = TRUE)) %>%
-  ungroup()
 
-top10 <- country_bal %>% top_n(10, trade_bal)
-bottom10 <- country_bal %>% top_n(-10, trade_bal)
+```{r, message=FALSE, warning=FALSE}
+# join total balance with trade_balance to do the percentage variables
 
-combined <- bind_rows(bottom10, top10) %>%
-  arrange(trade_bal)
+trade_balance <- trade_balance |>
+  left_join(total_balance, by = c("date", "description")) |>
+  mutate(
+    perc_nx = (trade_bal / net_exports) * 100,
+    perc_ex = if_else(trade_bal >= 0, (trade_bal / total_exports) * 100, NA_real_),
+    perc_im = if_else(trade_bal < 0, (trade_bal / abs(total_imports)) * 100, NA_real_)
+  )
 
-# Plot horizontal bar chart
-ggplot(combined, aes(x = reorder(Country, trade_bal), y = trade_bal)) +
-  geom_col() +
-  coord_flip() +
-  labs(title = "Net Trade Balance by Country (2017)",
-       x = "Country",
-       y = "Trade Balance (USD)")
 
 
 ```
+
+ALBUMINOIDAL SUBSTANCES; MODIFIED STARCHES; GLUES; ENZYMES
+AIRCRAFT, SPACECRAFT, AND PARTS THEREOF
+TOYS, GAMES AND SPORTS EQUIPMENT; PARTS AND ACCESSORIES THEREOF
+
+```{r}
+# Set target country and description
+target_country <- "Syria"
+target_description <- "TOYS, GAMES AND SPORTS EQUIPMENT; PARTS AND ACCESSORIES THEREOF"
+
+# Filter data for country and description
+country_data <- trade_balance %>%
+  filter(country == target_country, description == target_description)
+
+# Compute average of absolute trade balance
+avg_val <- mean(abs(country_data$trade_bal), na.rm = TRUE)
+
+# Determine scale label and factor
+if (avg_val >= 1e9) {
+  scale_factor <- 1e9
+  scale_label <- "Billions"
+} else if (avg_val >= 1e6) {
+  scale_factor <- 1e6
+  scale_label <- "Millions"
+} else if (avg_val >= 1e3) {
+  scale_factor <- 1e3
+  scale_label <- "Thousands"
+} else {
+  scale_factor <- 1
+  scale_label <- ""
+}
+
+# Plot with subtitle
+country_data %>%
+  mutate(scaled_trade_bal = trade_bal / scale_factor) %>%
+  ggplot(aes(x = date, y = scaled_trade_bal)) +
+  geom_line() +
+  labs(
+    title = paste0(target_country, " Trade Balance (", scale_label, ")"),
+    subtitle = target_description,
+    x = "Date",
+    y = paste0("Trade Balance (", scale_label, ")")
+  ) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal()
+
+
+
+# Plot percentage contribution of exports/imports
+country_data %>%
+  filter(country == target_country, description == target_description) %>%
+  mutate(
+    perc_trade = coalesce(perc_ex, perc_im)  # merges into one variable, keeping sign
+  ) %>%
+  ggplot(aes(x = date, y = perc_trade)) +
+  geom_line() +
+  labs(
+    title = paste0(target_country, " Trade Percentage Share"),
+    subtitle = target_description,
+    x = "Date",
+    y = "Percent of Total Trade (%)"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+
+
+```
+
+
 
 
 
 ```{r}
 
-trade <- read_csv("trade.csv") %>%
-  mutate(
-    Month = (Quarter * 3) - 2,
-    date = ymd(paste(Year, Month, 1)),
-    Quarter = yearquarter(date)
-  ) %>%
-  group_by(date, Description) %>%
-  mutate(
-    total_by_desc_qtr = sum(trade_bal, na.rm = TRUE),
-    desc_pct = trade_bal / total_by_desc_qtr
-  ) %>%
-  ungroup()
 
 
 ```
-
-
-
-fixing data set 
-I'm doing the percentage preparations
-
-```{r}
-
-
-
-```
-
-
-
-
-
 
 
 
